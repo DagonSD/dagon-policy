@@ -1,0 +1,47 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-non-root
+  annotations:
+    policies.kyverno.io/title: "Require Non-Root Container Execution"
+    policies.kyverno.io/category: "Pod Security"
+    policies.kyverno.io/severity: "high"
+    policies.kyverno.io/subject: "Pod"
+    policies.kyverno.io/controls: "SOC2-CC6.6, NIST-CM-6, CIS-K8S-5.2.6"
+    policies.kyverno.io/description: >-
+      Containers must not run as root (UID 0). Running as root grants broad
+      filesystem and capability access that can be exploited to escape the
+      container (SOC2 CC6.6). Fix: set securityContext.runAsNonRoot: true
+      or securityContext.runAsUser to a value greater than 0.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-run-as-non-root
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Pod '{{ request.object.metadata.name }}' has a container that may
+          run as root. Set securityContext.runAsNonRoot: true or
+          securityContext.runAsUser to a non-zero UID on every container
+          (SOC2 CC6.6).
+        foreach:
+          - list: "request.object.spec.containers"
+            anyPattern:
+              - securityContext:
+                  runAsNonRoot: true
+              - securityContext:
+                  runAsUser: ">0"

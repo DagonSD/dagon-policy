@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-alpha
+  labels:
+    dagon.io/managed: "true"
+    dagon.io/tenant-id: "11111111-1111-1111-1111-111111111111"
+    dagon.io/compliance-tier: "soc2"
+    dagon.io/environment: "dev"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-cross-namespace-sa-token
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: mycompany.azurecr.io/apps/backend:v1.0.0
+  volumes:
+    - name: foreign-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: "https://team-beta-service.team-beta.svc.cluster.local"
+              expirationSeconds: 3600
+              path: token
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-local-sa-token
+  namespace: team-alpha
+spec:
+  serviceAccountName: team-alpha-worker
+  containers:
+    - name: app
+      image: mycompany.azurecr.io/apps/backend:v1.0.0

@@ -1,0 +1,19 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: require-network-policy-test
+policies:
+  - policy.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: require-network-policy
+    rule: check-network-policy-label
+    resource: namespace-no-network-policy-label
+    kind: Namespace
+    result: fail
+  - policy: require-network-policy
+    rule: check-network-policy-label
+    resource: namespace-with-network-policy-label
+    kind: Namespace
+    result: pass

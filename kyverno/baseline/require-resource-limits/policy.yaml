@@ -1,0 +1,47 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+  annotations:
+    policies.kyverno.io/title: "Require CPU and Memory Limits"
+    policies.kyverno.io/category: "Resource Management"
+    policies.kyverno.io/severity: "medium"
+    policies.kyverno.io/subject: "Pod"
+    policies.kyverno.io/controls: "SOC2-CC7.1, NIST-SA-8"
+    policies.kyverno.io/description: >-
+      All containers must declare explicit CPU and memory resource limits.
+      Containers without limits can consume unbounded resources, causing
+      noisy-neighbour denial-of-service for other tenants (SOC2 CC7.1).
+      Fix: add a resources.limits block with cpu and memory to every container.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-container-limits
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Pod '{{ request.object.metadata.name }}' has a container missing
+          resource limits. Add resources.limits.cpu and resources.limits.memory
+          to every container to prevent unbounded resource consumption
+          (SOC2 CC7.1).
+        foreach:
+          - list: "request.object.spec.containers"
+            pattern:
+              resources:
+                limits:
+                  cpu: "?*"
+                  memory: "?*"

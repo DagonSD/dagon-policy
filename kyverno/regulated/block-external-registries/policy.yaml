@@ -1,0 +1,59 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-external-registries
+  annotations:
+    policies.kyverno.io/title: "Block Images from External Container Registries"
+    policies.kyverno.io/category: "Image Security"
+    policies.kyverno.io/severity: "high"
+    policies.kyverno.io/subject: "Pod"
+    policies.kyverno.io/controls: "SOC2-CC6.1, HIPAA-164.312"
+    policies.kyverno.io/description: >-
+      In regulated namespaces (soc2/hipaa/gdpr compliance tier), container
+      images must be pulled from the Dagon-approved Azure Container Registry
+      (ACR) prefix. Images from Docker Hub, GHCR, Quay, or any other external
+      registry are blocked because they have not passed the organisation's
+      vulnerability scan pipeline (SOC2 CC6.1). Fix: push the image to the
+      approved ACR and reference it as <tenant-acr>.azurecr.io/<repo>:<version>.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-registry
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaceSelector:
+                matchExpressions:
+                  - key: dagon.io/managed
+                    operator: In
+                    values:
+                      - "true"
+                  - key: dagon.io/compliance-tier
+                    operator: In
+                    values:
+                      - "soc2"
+                      - "hipaa"
+                      - "gdpr"
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Image '{{ element.image }}' does not come from an approved ACR
+          registry (*.azurecr.io). External registries are not permitted in
+          regulated namespaces (SOC2 CC6.1, HIPAA §164.312). Push the image
+          to the tenant ACR and reference it as
+          <tenant>.azurecr.io/<name>:<version>.
+        foreach:
+          - list: "request.object.spec.containers"
+            pattern:
+              image: "*.azurecr.io/*"

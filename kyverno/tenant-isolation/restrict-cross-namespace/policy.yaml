@@ -1,0 +1,58 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-cross-namespace-serviceaccount
+  annotations:
+    policies.kyverno.io/title: "Restrict Cross-Namespace ServiceAccount Token Audiences"
+    policies.kyverno.io/category: "Tenant Isolation"
+    policies.kyverno.io/severity: "critical"
+    policies.kyverno.io/subject: "Pod"
+    policies.kyverno.io/controls: "SOC2-CC6.2, SOC2-CC6.1"
+    policies.kyverno.io/description: >-
+      Pods must not use projected ServiceAccount tokens with explicit audience
+      values that reference services in other namespaces. Cross-namespace
+      audience tokens are a privilege escalation vector that can be used to
+      authenticate to services owned by a different tenant (SOC2 CC6.2).
+      Fix: remove the audience field from projected serviceAccountToken
+      volumes, or ensure the audience references a service within the same
+      namespace. This policy is defence-in-depth alongside RBAC controls
+      managed in dagon-gitops.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-serviceaccount-audience
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaceSelector:
+                matchExpressions:
+                  - key: dagon.io/managed
+                    operator: In
+                    values:
+                      - "true"
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Pod '{{ request.object.metadata.name }}' uses a projected
+          ServiceAccount token with an explicit audience field. Cross-namespace
+          audience tokens can authenticate to foreign tenant services
+          (SOC2 CC6.2). Remove the audience field from the projected
+          serviceAccountToken volume, or verify it references a service
+          within namespace '{{ request.object.metadata.namespace }}'.
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.volumes[].projected.sources[].serviceAccountToken.audience | length(@) }}"
+                operator: GreaterThan
+                value: "0"

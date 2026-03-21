@@ -1,0 +1,49 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-latest-image-tag
+  annotations:
+    policies.kyverno.io/title: "Block 'latest' Image Tag"
+    policies.kyverno.io/category: "Image Security"
+    policies.kyverno.io/severity: "high"
+    policies.kyverno.io/subject: "Pod"
+    policies.kyverno.io/controls: "SOC2-CC6.1, NIST-CM-7"
+    policies.kyverno.io/description: >-
+      Container images must reference a pinned semantic version or immutable
+      digest. The 'latest' tag is mutable and creates non-deterministic
+      deployments that cannot be audited or reproduced (SOC2 CC6.1).
+      Fix: replace 'myimage:latest' with 'myimage:v1.2.3' or
+      'myimage@sha256:<digest>'.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-image-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Pod '{{ request.object.metadata.name }}' has a container using the
+          'latest' tag or an untagged image. Mutable tags create
+          non-deterministic deployments that cannot be audited (SOC2 CC6.1).
+          Use a semantic version tag (e.g. myimage:v1.2.3) or an immutable
+          digest (e.g. myimage@sha256:<digest>) on every container.
+        foreach:
+          - list: "request.object.spec.containers"
+            pattern:
+              image: "!*:latest & !*:*latest* & ?*:?*"
+          - list: "request.object.spec.initContainers"
+            pattern:
+              image: "!*:latest & !*:*latest* & ?*:?*"

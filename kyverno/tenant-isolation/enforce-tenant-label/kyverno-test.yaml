@@ -1,0 +1,17 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: enforce-tenant-label-test
+policies:
+  - policy.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: enforce-tenant-label
+    rule: check-tenant-id-label
+    resource: namespace-missing-tenant-id
+    result: fail
+  - policy: enforce-tenant-label
+    rule: check-tenant-id-label
+    resource: namespace-with-tenant-id
+    result: pass

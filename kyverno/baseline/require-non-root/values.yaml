@@ -1,0 +1,6 @@
+namespaceSelectorLabels:
+  team-alpha:
+    dagon.io/managed: "true"
+    dagon.io/tenant-id: "11111111-1111-1111-1111-111111111111"
+    dagon.io/compliance-tier: "soc2"
+    dagon.io/environment: "dev"

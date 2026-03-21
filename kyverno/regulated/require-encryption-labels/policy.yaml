@@ -1,0 +1,58 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-encryption-labels
+  annotations:
+    policies.kyverno.io/title: "Require Encryption Annotation on Regulated Namespaces"
+    policies.kyverno.io/category: "Data Protection"
+    policies.kyverno.io/severity: "high"
+    policies.kyverno.io/subject: "Namespace"
+    policies.kyverno.io/controls: "GDPR-Art25, SOC2-CC6.1"
+    policies.kyverno.io/description: >-
+      Namespaces with compliance-tier 'hipaa' or 'gdpr' must carry the
+      annotation dagon.io/encryption: "at-rest" to confirm that persistent
+      data is encrypted at rest (GDPR Art. 25 — Data Protection by Design).
+      This annotation is applied by the provisioning workflow after verifying
+      the underlying storage class uses encryption. Fix: ensure the namespace
+      provisioning workflow sets this annotation during creation.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-encryption-annotation
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchExpressions:
+                  - key: dagon.io/managed
+                    operator: In
+                    values:
+                      - "true"
+                  - key: dagon.io/compliance-tier
+                    operator: In
+                    values:
+                      - "hipaa"
+                      - "gdpr"
+      exclude:
+        any:
+          - resources:
+              names:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Namespace '{{ request.object.metadata.name }}' has compliance-tier
+          '{{ request.object.metadata.labels["dagon.io/compliance-tier"] }}'
+          but is missing annotation dagon.io/encryption: "at-rest" (GDPR
+          Art. 25). The provisioning workflow must confirm encryption is
+          enabled on the underlying storage class and apply this annotation.
+        pattern:
+          metadata:
+            annotations:
+              dagon.io/encryption: "at-rest"

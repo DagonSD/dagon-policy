@@ -1,0 +1,33 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: block-latest-image-tag-test
+policies:
+  - policy.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: block-latest-image-tag
+    rule: check-image-tag
+    resource: pod-with-latest-tag
+    namespace: team-alpha
+    kind: Pod
+    result: fail
+  - policy: block-latest-image-tag
+    rule: check-image-tag
+    resource: pod-with-no-tag
+    namespace: team-alpha
+    kind: Pod
+    result: fail
+  - policy: block-latest-image-tag
+    rule: check-image-tag
+    resource: pod-with-pinned-tag
+    namespace: team-alpha
+    kind: Pod
+    result: pass
+  - policy: block-latest-image-tag
+    rule: check-image-tag
+    resource: pod-with-digest
+    namespace: team-alpha
+    kind: Pod
+    result: pass

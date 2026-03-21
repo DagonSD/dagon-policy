@@ -1,0 +1,55 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-network-policy
+  annotations:
+    policies.kyverno.io/title: "Require Network Policy Acknowledgement on Namespace"
+    policies.kyverno.io/category: "Network Security"
+    policies.kyverno.io/severity: "high"
+    policies.kyverno.io/subject: "Namespace"
+    policies.kyverno.io/controls: "SOC2-CC6.2, NIST-SC-7"
+    policies.kyverno.io/description: >-
+      Every Dagon-managed namespace must carry the label
+      dagon.io/network-policy: "enforced" before workloads can be scheduled.
+      This label is applied automatically by the GitOps pipeline after a
+      default-deny NetworkPolicy is installed. Namespaces without this label
+      indicate that network isolation has not been established, violating
+      SOC2 CC6.2 (network access controls). Fix: ensure the GitOps pipeline
+      has applied the default-deny NetworkPolicy to this namespace.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-network-policy-label
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchExpressions:
+                  - key: dagon.io/managed
+                    operator: In
+                    values:
+                      - "true"
+      exclude:
+        any:
+          - resources:
+              names:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Namespace '{{ request.object.metadata.name }}' is missing the label
+          dagon.io/network-policy: "enforced". A default-deny NetworkPolicy
+          must be applied before workloads are deployed (SOC2 CC6.2). The
+          GitOps pipeline applies this label automatically once the
+          NetworkPolicy object exists. Check ArgoCD sync status for this
+          namespace.
+        pattern:
+          metadata:
+            labels:
+              dagon.io/network-policy: "enforced"

@@ -1,0 +1,27 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: block-privileged-containers-test
+policies:
+  - policy.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: block-privileged-containers
+    rule: check-privileged
+    resource: pod-privileged-true
+    namespace: team-alpha
+    kind: Pod
+    result: fail
+  - policy: block-privileged-containers
+    rule: check-privileged
+    resource: pod-privileged-false
+    namespace: team-alpha
+    kind: Pod
+    result: pass
+  - policy: block-privileged-containers
+    rule: check-privileged
+    resource: pod-no-privilege-field
+    namespace: team-alpha
+    kind: Pod
+    result: pass

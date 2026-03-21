@@ -1,0 +1,52 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-tenant-label
+  annotations:
+    policies.kyverno.io/title: "Require Tenant ID Label on Namespaces"
+    policies.kyverno.io/category: "Tenant Isolation"
+    policies.kyverno.io/severity: "critical"
+    policies.kyverno.io/subject: "Namespace"
+    policies.kyverno.io/controls: "SOC2-CC6.1, SOC2-CC6.2"
+    policies.kyverno.io/description: >-
+      Every Dagon-managed namespace must carry a valid dagon.io/tenant-id
+      label containing a non-empty value. Without this label, tenant isolation
+      cannot be enforced by downstream policies, quota controllers, or the
+      audit log pipeline. Fix: ensure the namespace is created via the Dagon
+      portal or API, which stamps the tenant-id automatically.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-tenant-id-label
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchExpressions:
+                  - key: dagon.io/managed
+                    operator: In
+                    values:
+                      - "true"
+      exclude:
+        any:
+          - resources:
+              names:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Namespace '{{ request.object.metadata.name }}' is missing the
+          required label dagon.io/tenant-id. All Dagon-managed namespaces
+          must identify their tenant for isolation and audit purposes
+          (SOC2 CC6.1). Create namespaces via the Dagon portal to ensure
+          this label is applied correctly.
+        pattern:
+          metadata:
+            labels:
+              dagon.io/tenant-id: "?*"

@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-alpha
+  labels:
+    dagon.io/managed: "true"
+    dagon.io/tenant-id: "11111111-1111-1111-1111-111111111111"
+    dagon.io/compliance-tier: "soc2"
+    dagon.io/environment: "dev"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-running-as-root
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25.3
+      securityContext:
+        runAsUser: 0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-no-security-context
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25.3
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-run-as-non-root-flag
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25.3
+      securityContext:
+        runAsNonRoot: true
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-run-as-uid-1000
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25.3
+      securityContext:
+        runAsUser: 1000

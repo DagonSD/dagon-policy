@@ -1,0 +1,70 @@
+name: Policy CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  kyverno-test:
+    name: Kyverno Policy Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Kyverno CLI
+        run: |
+          KYVERNO_VERSION="v1.12.5"
+          curl -sSL "https://github.com/kyverno/kyverno/releases/download/${KYVERNO_VERSION}/kyverno_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin kyverno
+          kyverno version
+
+      - name: Run Kyverno tests — baseline policies
+        run: kyverno test kyverno/baseline/ --detailed-results
+
+      - name: Run Kyverno tests — regulated policies
+        run: kyverno test kyverno/regulated/ --detailed-results
+
+      - name: Run Kyverno tests — tenant-isolation policies
+        run: kyverno test kyverno/tenant-isolation/ --detailed-results
+
+  opa-rego-test:
+    name: OPA/Rego IaC Policy Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install OPA CLI
+        run: |
+          OPA_VERSION="v0.68.0"
+          curl -sSL "https://github.com/open-policy-agent/opa/releases/download/${OPA_VERSION}/opa_linux_amd64_static" \
+            -o /usr/local/bin/opa
+          chmod +x /usr/local/bin/opa
+          opa version
+
+      - name: Run OPA unit tests — azure rules
+        run: opa test iac/azure/ --verbose
+
+      - name: Run OPA unit tests — common rules
+        run: opa test iac/common/ --verbose
+
+  lint:
+    name: YAML Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pip install yamllint==1.35.1
+
+      - name: Lint Kyverno YAML
+        run: yamllint -c .yamllint.yaml kyverno/

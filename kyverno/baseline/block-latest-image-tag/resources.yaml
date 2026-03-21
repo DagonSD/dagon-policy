@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-alpha
+  labels:
+    dagon.io/managed: "true"
+    dagon.io/tenant-id: "11111111-1111-1111-1111-111111111111"
+    dagon.io/compliance-tier: "soc2"
+    dagon.io/environment: "dev"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-latest-tag
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: nginx:latest
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-no-tag
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: nginx
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-pinned-tag
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25.3
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-digest
+  namespace: team-alpha
+spec:
+  containers:
+    - name: app
+      image: nginx@sha256:a3fcd8a2d8d0c5a5c60f7fc0f5f4d8e2e6b6c9f0e2a5d7b3a1c9e4f6b8d0a2c4

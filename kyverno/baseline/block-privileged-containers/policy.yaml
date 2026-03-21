@@ -1,0 +1,46 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-privileged-containers
+  annotations:
+    policies.kyverno.io/title: "Block Privileged Containers"
+    policies.kyverno.io/category: "Pod Security"
+    policies.kyverno.io/severity: "critical"
+    policies.kyverno.io/subject: "Pod"
+    policies.kyverno.io/controls: "SOC2-CC6.6, HIPAA-164.312, CIS-K8S-5.2.1"
+    policies.kyverno.io/description: >-
+      Containers must not run in privileged mode. A privileged container has
+      full access to the host kernel and can be used to escape the container
+      boundary entirely, compromising all tenants on the node
+      (HIPAA §164.312, SOC2 CC6.6). Fix: remove securityContext.privileged
+      or set it to false.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-privileged
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argo-system
+                - cert-manager
+                - external-secrets
+      validate:
+        message: >-
+          Pod '{{ request.object.metadata.name }}' has a container running in
+          privileged mode. Privileged containers have full host kernel access
+          and violate tenant isolation (HIPAA §164.312, SOC2 CC6.6). Remove
+          securityContext.privileged or set it to false on every container.
+        foreach:
+          - list: "request.object.spec.containers"
+            pattern:
+              =(securityContext):
+                =(privileged): "false"

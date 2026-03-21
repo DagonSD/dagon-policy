@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: regulated-ns
+  labels:
+    dagon.io/managed: "true"
+    dagon.io/compliance-tier: "soc2"
+    dagon.io/tenant-id: "22222222-2222-2222-2222-222222222222"
+    dagon.io/environment: "prod"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-docker-hub-image
+  namespace: regulated-ns
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25.3
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-ghcr-image
+  namespace: regulated-ns
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/some-org/some-app:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-acr-image
+  namespace: regulated-ns
+spec:
+  containers:
+    - name: app
+      image: mycompany.azurecr.io/apps/backend:v2.1.0
