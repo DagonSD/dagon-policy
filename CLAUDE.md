@@ -8,13 +8,17 @@ Cluster-level security guardrails: Kyverno admission policies and OPA/Rego rules
 
 ```
 kyverno/
-  <policy-name>/
-    policy.yaml         # The ClusterPolicy definition
-    kyverno-test.yaml   # Required unit test (pass + fail cases)
-rego/
-  <module-name>/
-    policy.rego         # OPA/Rego rule for IaC validation
-    policy_test.rego    # Required tests
+  <tier>/
+    <policy-name>/
+      policy.yaml           # The ClusterPolicy definition
+      kyverno-test.yaml     # Required unit test (pass + fail cases)
+iac/
+  azure/
+    <rule-name>.rego        # OPA/Rego rule for Azure IaC validation
+    <rule-name>_test.rego   # Required tests
+  common/
+    <rule-name>.rego        # Cloud-agnostic OPA/Rego rules
+    <rule-name>_test.rego   # Required tests
 ```
 
 ## Kyverno Policy Standards
@@ -24,7 +28,7 @@ rego/
 - `validationFailureAction: Enforce` (default) or `Audit` — always explicit
 - `background: true` to scan existing resources
 - Descriptive `message` explaining the failure, why it failed, and how to fix it
-- `exclude` block for system namespaces: `kube-system`, `kyverno`, `argo-system`
+- `exclude` block for system namespaces: `kube-system`, `kyverno`, `argo-system`, `cert-manager`, `external-secrets`
 - Compliance mapping in annotations (e.g., `policies.kyverno.io/controls: "SOC2 CC6.1"`)
 
 **Policy metadata annotation pattern:**

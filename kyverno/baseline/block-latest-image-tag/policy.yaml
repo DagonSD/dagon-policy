@@ -24,6 +24,12 @@ spec:
           - resources:
               kinds:
                 - Pod
+              namespaceSelector:
+                matchExpressions:
+                  - key: arxen.io/managed
+                    operator: In
+                    values:
+                      - "true"
       exclude:
         any:
           - resources:
